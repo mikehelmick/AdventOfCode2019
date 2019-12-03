@@ -1,4 +1,3 @@
-
 defmodule Puzzle do
 
   # Convert the input string to a list of {dir, steps}
@@ -18,27 +17,21 @@ defmodule Puzzle do
   def dir("D"), do: {-1, 0}
 
   # expand a single direction
-  def increment(_, _, 0, acc) do
-    acc
-  end
+  def increment(_, _, 0, acc), do: acc
   def increment({dx, dy}, {x, y}, times, acc) do
     newPos = {x + dx, y + dy}
     increment({dx, dy}, newPos, times - 1, acc ++ [newPos])
   end
 
   # convert the command list to a position list
-  def expand([], lst) do
-    lst
-  end
+  def expand([], lst), do: lst
   def expand([{dir, amt}|rest], lst) do
     curPos = List.last(lst)
     new = lst ++ increment(dir(dir), curPos, amt, [])
     expand(rest, new)
   end
 
-  def expand(x) when is_list(x) do
-    expand(x, [{0,0}])
-  end
+  def expand(x) when is_list(x), do: expand(x, [{0,0}])
 end
 
 wire1str = "R992,U284,L447,D597,R888,D327,R949,U520,R27,U555,L144,D284,R538,U249,R323,U297,R136,U838,L704,D621,R488,U856,R301,U539,L701,U363,R611,D94,L734,D560,L414,U890,R236,D699,L384,D452,R702,D637,L164,U410,R649,U901,L910,D595,R339,D346,R959,U777,R218,D667,R534,D762,R484,D914,L25,U959,R984,D922,R612,U999,L169,D599,L604,D357,L217,D327,L730,D949,L565,D332,L114,D512,R460,D495,L187,D697,R313,U319,L8,D915,L518,D513,R738,U9,R137,U542,L188,U440,R576,D307,R734,U58,R285,D401,R166,U156,L859,U132,L10,U753,L933,U915,R459,D50,R231,D166,L253,U844,R585,D871,L799,U53,R785,U336,R622,D108,R555,D918,L217,D668,L220,U738,L997,D998,R964,D456,L54,U930,R985,D244,L613,D116,L994,D20,R949,D245,L704,D564,L210,D13,R998,U951,L482,U579,L793,U680,L285,U770,L975,D54,R79,U613,L907,U467,L256,D783,R883,U810,R409,D508,L898,D286,L40,U741,L759,D549,R210,U411,R638,D643,L784,U538,L739,U771,L773,U491,L303,D425,L891,U182,R412,U951,L381,U501,R482,D625,R870,D320,L464,U555,R566,D781,L540,D754,L211,U73,L321,D869,R994,D177,R496,U383,R911,U819,L651,D774,L591,U666,L883,U767,R232,U822,L499,U44,L45,U873,L98,D487,L47,U803,R855,U256,R567,D88,R138,D678,L37,U38,R783,U569,L646,D261,L597,U275,L527,U48,R433,D324,L631,D160,L145,D128,R894,U223,R664,U510,R756,D700,R297,D361,R837,U996,L769,U813,L477,U420,L172,U482,R891,D379,L329,U55,R284,U155,L816,U659,L671,U996,R997,U252,R514,D718,L661,D625,R910,D960,L39,U610,R853,U859,R174,U215,L603,U745,L587,D736,R365,U78,R306,U158,L813,U885,R558,U631,L110,D232,L519,D366,R909,D10,R294"
@@ -48,7 +41,7 @@ wire2str = "L1001,D833,L855,D123,R36,U295,L319,D700,L164,U576,L68,D757,R192,D738
 w1cmd = Puzzle.split_input(wire1str)
 w2cmd = Puzzle.split_input(wire2str)
 
-# convert to all x,y points visited
+# convert to all x,y points visited, discard origin {0,0}
 [_|w1exp] = Puzzle.expand(w1cmd)
 w1exp = MapSet.new(w1exp)
 [_|w2exp] = Puzzle.expand(w2cmd)

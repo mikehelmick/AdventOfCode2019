@@ -15,26 +15,20 @@ defmodule Puzzle do
   def dir("U"), do: {1, 0}
   def dir("D"), do: {-1, 0}
 
-  def increment(_, _, 0, acc) do
-    acc
-  end
+  def increment(_, _, 0, acc), do: acc
   def increment({dx, dy}, {x, y}, times, acc) do
     newPos = {x + dx, y + dy}
     increment({dx, dy}, newPos, times - 1, acc ++ [newPos])
   end
 
-  def expand([], lst) do
-    lst
-  end
+  def expand([], lst), do: lst
   def expand([{dir, amt}|rest], lst) do
     curPos = List.last(lst)
     new = lst ++ increment(dir(dir), curPos, amt, [])
     expand(rest, new)
   end
 
-  def expand(x) when is_list(x) do
-    expand(x, [{0,0}])
-  end
+  def expand(x) when is_list(x), do: expand(x, [{0,0}])
 
   def find_steps([], _), do: nil
   def find_steps([{{x, y}, steps}|_], {x, y}), do: steps
