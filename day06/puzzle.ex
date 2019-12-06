@@ -23,8 +23,8 @@ defmodule Puzzle do
 
   # Counts all edges in the system
   def count_edges([], _, acc), do: acc
-  def count_edges(["COM"], _, acc), do: acc
   def count_edges(["COM"|rest], map, acc), do: count_edges(rest, map, acc)
+  # for each object in the system, cound path to COM.
   def count_edges([obj|rest], map, acc) do
     IO.puts("counting #{obj}, current #{acc}")
     count_edges(rest, map, crawl(obj, map, 0) + acc)
