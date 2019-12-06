@@ -6,10 +6,9 @@ defmodule Puzzle do
   # builds incoming and outgoing edges representing the orbital graph
   def build_edges([], o_map, i_map, allobjs), do: {o_map, i_map, MapSet.to_list(allobjs)}
   def build_edges([line | rest], o_map, i_map, allobjs) do
-    IO.puts("line #{line}")
+    #IO.puts("line #{line}")
     [inner, outer] = String.split(line, ")")
-    {_, updates_o_map} = Map.get_and_update(o_map, inner,
-                 fn x -> update_entry(x, outer) end)
+    {_, updates_o_map} = Map.get_and_update(o_map, inner, fn x -> update_entry(x, outer) end)
     updated_i_map = Map.put(i_map, outer, inner)
     new_all = MapSet.put(allobjs, inner) |> MapSet.put(outer)
     build_edges(rest, updates_o_map, updated_i_map, new_all)
@@ -18,7 +17,7 @@ defmodule Puzzle do
   # Counts edges from a body to COM
   def crawl("COM", _, acc), do: acc
   def crawl(obj, map, acc) do
-    IO.puts("crawl #{obj}")
+    #IO.puts("crawl #{obj}")
     crawl(Map.get(map, obj), map, acc + 1)
   end
 
