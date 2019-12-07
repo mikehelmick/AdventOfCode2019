@@ -13,6 +13,7 @@ end
 
 
 input = IO.read(:stdio, :all)
+  |> String.trim()
   |> String.split("\n")
 
 Puzzle.print_lines(input)
