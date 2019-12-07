@@ -117,6 +117,7 @@ func main() {
 	input := "3,8,1001,8,10,8,105,1,0,0,21,34,43,60,81,94,175,256,337,418,99999,3,9,101,2,9,9,102,4,9,9,4,9,99,3,9,102,2,9,9,4,9,99,3,9,102,4,9,9,1001,9,4,9,102,3,9,9,4,9,99,3,9,102,4,9,9,1001,9,2,9,1002,9,3,9,101,4,9,9,4,9,99,3,9,1001,9,4,9,102,2,9,9,4,9,99,3,9,102,2,9,9,4,9,3,9,1001,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,101,1,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,1001,9,2,9,4,9,3,9,101,2,9,9,4,9,3,9,101,1,9,9,4,9,3,9,102,2,9,9,4,9,3,9,1002,9,2,9,4,9,99,3,9,101,2,9,9,4,9,3,9,1001,9,1,9,4,9,3,9,101,1,9,9,4,9,3,9,102,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,1001,9,1,9,4,9,3,9,1001,9,2,9,4,9,3,9,101,1,9,9,4,9,3,9,1001,9,1,9,4,9,3,9,1001,9,2,9,4,9,99,3,9,1002,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,1001,9,1,9,4,9,3,9,1002,9,2,9,4,9,3,9,1001,9,2,9,4,9,3,9,101,1,9,9,4,9,3,9,101,2,9,9,4,9,3,9,1001,9,2,9,4,9,99,3,9,101,2,9,9,4,9,3,9,101,1,9,9,4,9,3,9,101,1,9,9,4,9,3,9,101,1,9,9,4,9,3,9,1001,9,1,9,4,9,3,9,1001,9,2,9,4,9,3,9,1001,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,1001,9,2,9,4,9,3,9,1002,9,2,9,4,9,99,3,9,1001,9,1,9,4,9,3,9,1001,9,1,9,4,9,3,9,1002,9,2,9,4,9,3,9,1001,9,1,9,4,9,3,9,1002,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,1001,9,2,9,4,9,3,9,1001,9,2,9,4,9,3,9,101,2,9,9,4,9,3,9,102,2,9,9,4,9,99"
 	dataS := strings.Split(input, ",")
 
+	// Convert string input to int array.
 	var data = []int{}
 	for _, elem := range dataS {
 		i, err := strconv.ParseInt(elem, 10, 64)
@@ -126,14 +127,16 @@ func main() {
 		data = append(data, int(i))
 	}
 
-	permCh := make(chan []int, 100)
-	maxThurst := 0
+	// Span a function to generare all permutations of the phase sequences.
+	permCh := make(chan []int, 1000)
 	a := []int{9, 8, 7, 6, 5}
 	go func() {
 		permutations(a, permCh)
 		permCh <- []int{0}
 	}()
 
+	// Read back the channel of phase permutations and run each one.
+	maxThurst := 0
 	for {
 		perm := <-permCh
 		log.Printf("Received: %v", perm)
@@ -142,48 +145,36 @@ func main() {
 			break
 		}
 
-		// programming competition style...
-		// separate copy of the program for each machine.
-		p1 := make([]int, len(data))
-		copy(p1, data)
-		p2 := make([]int, len(data))
-		copy(p2, data)
-		p3 := make([]int, len(data))
-		copy(p3, data)
-		p4 := make([]int, len(data))
-		copy(p4, data)
-		p5 := make([]int, len(data))
-		copy(p5, data)
-
-		// input channel for each machine.
-		ch1 := make(chan int, 20)
-		ch1 <- perm[0]
-		ch1 <- 0 // initial input
-		ch2 := make(chan int, 20)
-		ch2 <- perm[1]
-		ch3 := make(chan int, 20)
-		ch3 <- perm[2]
-		ch4 := make(chan int, 20)
-		ch4 <- perm[3]
-		ch5 := make(chan int, 20)
-		ch5 <- perm[4]
+		// separate copy of the program for each machine & input channel.
+		programs := make([][]int, 5)
+		channels := make([]chan int, 5)
+		for i := 0; i < 5; i++ {
+			programs[i] = make([]int, len(data))
+			copy(programs[i], data)
+			channels[i] = make(chan int, 20)
+			channels[i] <- perm[i]
+			if i == 0 {
+				// input to 1st machine.
+				channels[i] <- 0
+			}
+		}
 
 		// single done output channel. We'll just wait for 5 dones.
 		doneC := make(chan bool, 5)
 
 		// start and link the parallel machines
-		go process(p1, 0, ch1, ch2, doneC)
-		go process(p2, 0, ch2, ch3, doneC)
-		go process(p3, 0, ch3, ch4, doneC)
-		go process(p4, 0, ch4, ch5, doneC)
-		go process(p5, 0, ch5, ch1, doneC)
+		go process(programs[0], 0, channels[0], channels[1], doneC)
+		go process(programs[1], 0, channels[1], channels[2], doneC)
+		go process(programs[2], 0, channels[2], channels[3], doneC)
+		go process(programs[3], 0, channels[3], channels[4], doneC)
+		go process(programs[4], 0, channels[4], channels[0], doneC)
 
 		for i := 0; i < 5; i++ {
 			<-doneC
 		}
-		// p5 will have written it's last output to p1's channel.
+		// programs[4] will have written it's last output to p1's channel.
 		// p1 should have already shut down, fingers crossed.
-		thrust := <-ch1
+		thrust := <-channels[0]
 		if thrust > maxThurst {
 			maxThurst = thrust
 		}
