@@ -88,7 +88,6 @@ func process(data []int, pos int, inC chan int, outC chan int) {
 // Generate all permutations of an array, send them to an output channel
 func permutations(arr []int, ch chan []int) {
 	var helper func([]int, int)
-
 	helper = func(arr []int, n int) {
 		if n == 1 {
 			tmp := make([]int, len(arr))
@@ -116,6 +115,7 @@ func main() {
 	input := "3,8,1001,8,10,8,105,1,0,0,21,34,43,60,81,94,175,256,337,418,99999,3,9,101,2,9,9,102,4,9,9,4,9,99,3,9,102,2,9,9,4,9,99,3,9,102,4,9,9,1001,9,4,9,102,3,9,9,4,9,99,3,9,102,4,9,9,1001,9,2,9,1002,9,3,9,101,4,9,9,4,9,99,3,9,1001,9,4,9,102,2,9,9,4,9,99,3,9,102,2,9,9,4,9,3,9,1001,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,101,1,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,1001,9,2,9,4,9,3,9,101,2,9,9,4,9,3,9,101,1,9,9,4,9,3,9,102,2,9,9,4,9,3,9,1002,9,2,9,4,9,99,3,9,101,2,9,9,4,9,3,9,1001,9,1,9,4,9,3,9,101,1,9,9,4,9,3,9,102,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,1001,9,1,9,4,9,3,9,1001,9,2,9,4,9,3,9,101,1,9,9,4,9,3,9,1001,9,1,9,4,9,3,9,1001,9,2,9,4,9,99,3,9,1002,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,1001,9,1,9,4,9,3,9,1002,9,2,9,4,9,3,9,1001,9,2,9,4,9,3,9,101,1,9,9,4,9,3,9,101,2,9,9,4,9,3,9,1001,9,2,9,4,9,99,3,9,101,2,9,9,4,9,3,9,101,1,9,9,4,9,3,9,101,1,9,9,4,9,3,9,101,1,9,9,4,9,3,9,1001,9,1,9,4,9,3,9,1001,9,2,9,4,9,3,9,1001,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,1001,9,2,9,4,9,3,9,1002,9,2,9,4,9,99,3,9,1001,9,1,9,4,9,3,9,1001,9,1,9,4,9,3,9,1002,9,2,9,4,9,3,9,1001,9,1,9,4,9,3,9,1002,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,1001,9,2,9,4,9,3,9,1001,9,2,9,4,9,3,9,101,2,9,9,4,9,3,9,102,2,9,9,4,9,99"
 	dataS := strings.Split(input, ",")
 
+	// Convert input string to int array.
 	var data = []int{}
 	for _, elem := range dataS {
 		i, err := strconv.ParseInt(elem, 10, 64)
@@ -125,16 +125,19 @@ func main() {
 		data = append(data, int(i))
 	}
 
-	inCh := make(chan int, 2)
-	outCh := make(chan int)
-	permCh := make(chan []int, 100)
+	// Generate all permutations for phase settings, write to channel.
+	permCh := make(chan []int, 1000)
 	maxThurst := 0
 	a := []int{0, 1, 2, 3, 4}
 	go func() {
 		permutations(a, permCh)
+		// terminate signal to channel.
 		permCh <- []int{0}
 	}()
 
+	// Read back the permutations channel, run all inputs.
+	inCh := make(chan int, 2)
+	outCh := make(chan int)
 	tmp := make([]int, len(data))
 	for {
 		perm := <-permCh
@@ -147,10 +150,12 @@ func main() {
 		thrust := 0 // initial parm to machine 1
 		for i := 0; i < 5; i++ {
 			log.Printf("IN: %v %v", perm[i], thrust)
+			// write the 2 inputs
 			inCh <- perm[i]
 			inCh <- thrust
 			copy(tmp, data)
 			go process(tmp, 0, inCh, outCh)
+			// read the single output.
 			thrust = <-outCh
 		}
 		//log.Printf("Max thrust %v from input %v", thrust, perm)
