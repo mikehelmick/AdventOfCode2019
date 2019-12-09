@@ -191,3 +191,30 @@ func TestJumpIfFalsePosition_True(t *testing.T) {
 		t.Errorf("Output was %v; want -1", v)
 	}
 }
+
+// By this time, assume memory addressing works, focus on functionality.
+func TestLessThan(t *testing.T) {
+	d := []int64{1107, 1, 2, 13, 1107, 2, 1, 15, 1107, 2, 2, 17, 104, -1, 104, -1, 104, -1, 99}
+	outc := run(d, []int64{})
+	defer close(outc)
+
+	exp := []int64{1, 0, 0}
+	for _, e := range exp {
+		if v := <-outc; v != e {
+			t.Errorf("Output was %v; want %v", v, e)
+		}
+	}
+}
+
+func TestEquals(t *testing.T) {
+	d := []int64{1108, 1, 1, 13, 1108, 2, 1, 15, 1108, 2, 2, 17, 104, -1, 104, -1, 104, -1, 99}
+	outc := run(d, []int64{})
+	defer close(outc)
+
+	exp := []int64{1, 0, 1}
+	for _, e := range exp {
+		if v := <-outc; v != e {
+			t.Errorf("Output was %v; want %v", v, e)
+		}
+	}
+}
