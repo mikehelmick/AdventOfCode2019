@@ -62,21 +62,18 @@ func (c *Emulator) Execute() {
 		increase := int64(4) // default increase
 		//log.Printf("PC %4d : %05d (%d,%d,%d)", pos, c.mem[pos], c.mem[pos+1], c.mem[pos+2], c.mem[pos+3])
 
-		if opcode == 99 {
-			log.Printf("END\n")
-			c.done <- true
-			return
-		} else if opcode == 1 {
+		switch opcode {
+		case 1:
 			c.mem[c.getP3Addr()] = c.mem[c.getP1Addr()] + c.mem[c.getP2Addr()]
-		} else if opcode == 2 {
+		case 2:
 			c.mem[c.getP3Addr()] = c.mem[c.getP1Addr()] * c.mem[c.getP2Addr()]
-		} else if opcode == 3 {
+		case 3:
 			c.mem[c.getP1Addr()] = <-c.input
 			increase = 2
-		} else if opcode == 4 {
+		case 4:
 			c.output <- c.mem[c.getP1Addr()]
 			increase = 2
-		} else if opcode == 5 {
+		case 5:
 			p1 := c.mem[c.getP1Addr()]
 			if p1 != 0 {
 				c.pc = c.mem[c.getP2Addr()]
@@ -84,7 +81,7 @@ func (c *Emulator) Execute() {
 			} else {
 				increase = 3
 			}
-		} else if opcode == 6 {
+		case 6:
 			p1 := c.mem[c.getP1Addr()]
 			if p1 == 0 {
 				c.pc = c.mem[c.getP2Addr()]
@@ -92,7 +89,7 @@ func (c *Emulator) Execute() {
 			} else {
 				increase = 3
 			}
-		} else if opcode == 7 {
+		case 7:
 			p1 := c.mem[c.getP1Addr()]
 			p2 := c.mem[c.getP2Addr()]
 			if p1 < p2 {
@@ -100,7 +97,7 @@ func (c *Emulator) Execute() {
 			} else {
 				c.mem[c.getP3Addr()] = 0
 			}
-		} else if opcode == 8 {
+		case 8:
 			p1 := c.mem[c.getP1Addr()]
 			p2 := c.mem[c.getP2Addr()]
 			if p1 == p2 {
@@ -108,11 +105,15 @@ func (c *Emulator) Execute() {
 			} else {
 				c.mem[c.getP3Addr()] = 0
 			}
-		} else if opcode == 9 {
+		case 9:
 			// relative base adjustment.
 			c.relativeBase += c.mem[c.getP1Addr()]
 			increase = 2
-		} else {
+		case 99:
+			log.Printf("END\n")
+			c.done <- true
+			return
+		default:
 			log.Fatalf("invalid input. data: %v opcode: %v pos: %v\n", c.mem[c.pc], opcode, c.pc)
 		}
 		c.pc += increase
