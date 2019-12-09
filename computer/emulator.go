@@ -13,6 +13,10 @@ type Emulator struct {
 	done   chan bool
 }
 
+const positionMode = 0
+const immediateMode = 1
+const relativeMode = 2
+
 // NewEmulator initializes a new intcode computer
 func NewEmulator(program []int64, input, output chan int64, done chan bool) *Emulator {
 	emu := new(Emulator)
@@ -31,9 +35,9 @@ func (c *Emulator) Debug() {
 
 func (c *Emulator) getArgAddr(offset int64, part int64) int64 {
 	switch c.mem[c.pc] / part % 10 {
-	case 1:
+	case immediateMode:
 		return c.pc + offset
-	case 2:
+	case relativeMode:
 		return c.relativeBase + c.mem[c.pc+offset]
 	}
 	return c.mem[c.pc+offset]
