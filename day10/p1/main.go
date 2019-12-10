@@ -130,14 +130,16 @@ func main() {
 	}
 
 	max := 0
+	var maxP point
 	for x := 0; x < width; x++ {
 		for y := 0; y < height; y++ {
 			fmt.Printf("%4d ", field[x][y])
 			if field[x][y] > max {
 				max = field[x][y]
+				maxP = point{x, y}
 			}
 		}
 		fmt.Printf("\n")
 	}
-	log.Printf("Max: %v", max)
+	log.Printf("Max: %v @ %v", max, maxP)
 }
