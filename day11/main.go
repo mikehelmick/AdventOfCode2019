@@ -67,26 +67,27 @@ func main() {
 	painted := make(map[pos]bool)
 
 	inC := make(chan int64, 5)
-	outC := make(chan int64, 50)
-	doneC := make(chan bool, 1)
-	emulator := computer.NewEmulator(data, inC, outC, doneC)
+	outC := make(chan computer.Output, 50)
+	emulator := computer.NewEmulator(data, inC, outC)
 
 	// part 1 starts on black (0), part 2 starts on white(1)
 	inC <- 1
 	maxX, maxY := 0, 0
 	go func() {
 		emulator.Execute()
-		close(outC)
 	}()
 
 	done := false
 	for !done {
 		//print(hull, p, d)
-		select {
-		case o := <-outC:
-			hull[p] = o
+		o := <-outC
+		if o.Done {
+			log.Printf("emulator terminated")
+			done = true
+		} else {
+			hull[p] = o.Val
 			painted[p] = true
-			if turn := <-outC; turn == 0 {
+			if turn := <-outC; turn.Val == 0 {
 				//fmt.Printf("Paint %v %v turn left\n", p, o)
 				d = d.turnLeft()
 			} else {
@@ -101,9 +102,6 @@ func main() {
 				maxY = p.y
 			}
 			inC <- hull[p]
-		case <-doneC:
-			log.Printf("emulator terminated")
-			done = true
 		}
 	}
 
@@ -120,6 +118,6 @@ func main() {
 		fmt.Printf("\n")
 	}
 
-	close(doneC)
+	close(outC)
 	close(inC)
 }

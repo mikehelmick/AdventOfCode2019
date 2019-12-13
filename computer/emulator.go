@@ -2,6 +2,14 @@ package computer
 
 import "log"
 
+// Output is a single piece of output from the emulator. If done is false
+// then it is an integer output from the machine. If done is true, the
+// machine has terminated.
+type Output struct {
+	Val  int64
+	Done bool
+}
+
 // Emulator representing a single instance of the intcode computer.
 type Emulator struct {
 	mem          []int64
@@ -9,8 +17,7 @@ type Emulator struct {
 	relativeBase int64
 
 	input  chan int64
-	output chan int64
-	done   chan bool
+	output chan Output
 }
 
 const positionMode = 0
@@ -18,13 +25,12 @@ const immediateMode = 1
 const relativeMode = 2
 
 // NewEmulator initializes a new intcode computer
-func NewEmulator(program []int64, input, output chan int64, done chan bool) *Emulator {
+func NewEmulator(program []int64, input chan int64, output chan Output) *Emulator {
 	emu := new(Emulator)
 	emu.mem = make([]int64, len(program)*10)
 	copy(emu.mem, program)
 	emu.input = input
 	emu.output = output
-	emu.done = done
 	return emu
 }
 
@@ -71,7 +77,7 @@ func (c *Emulator) Execute() {
 			c.mem[c.getP1Addr()] = <-c.input
 			increase = 2
 		case 4:
-			c.output <- c.mem[c.getP1Addr()]
+			c.output <- Output{c.mem[c.getP1Addr()], false}
 			increase = 2
 		case 5:
 			p1 := c.mem[c.getP1Addr()]
@@ -111,7 +117,7 @@ func (c *Emulator) Execute() {
 			increase = 2
 		case 99:
 			log.Printf("END\n")
-			c.done <- true
+			c.output <- Output{0, true}
 			return
 		default:
 			log.Fatalf("invalid input. data: %v opcode: %v pos: %v\n", c.mem[c.pc], opcode, c.pc)

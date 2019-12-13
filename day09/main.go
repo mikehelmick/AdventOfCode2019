@@ -25,22 +25,23 @@ func main() {
 	inputs := []int64{1, 2}
 	for _, input := range inputs {
 		inC := make(chan int64, 5)
-		outC := make(chan int64, 50)
-		doneC := make(chan bool, 1)
-		emulator := computer.NewEmulator(data, inC, outC, doneC)
+		outC := make(chan computer.Output, 50)
+		emulator := computer.NewEmulator(data, inC, outC)
 
 		// Part 1 had input of 1, part 2 had input of 2
 		inC <- input
 		go func() {
 			emulator.Execute()
-			close(outC)
 		}()
 
 		for x := range outC {
-			log.Printf("Part %v: Output: %v", input, x)
+			if x.Done {
+				break
+			} else {
+				log.Printf("Part %v: Output: %v", input, x.Val)
+			}
 		}
-		<-doneC
-		close(doneC)
+		close(outC)
 		close(inC)
 	}
 }

@@ -2,21 +2,24 @@ package computer
 
 import "testing"
 
-func run(data []int64, input []int64) chan int64 {
+func run(data []int64, input []int64) chan Output {
 	in := make(chan int64, 10)
-	out := make(chan int64, 10)
-	done := make(chan bool, 1)
+	out := make(chan Output, 10)
 
 	for _, i := range input {
 		in <- i
 	}
-	e := NewEmulator(data, in, out, done)
+	e := NewEmulator(data, in, out)
 	e.Execute()
-	<-done
 
 	close(in)
-	close(done)
 	return out
+}
+
+func checkTerminated(t *testing.T, outc chan Output) {
+	if v := <-outc; !v.Done {
+		t.Errorf("Machine should have terminated, but didn't.")
+	}
 }
 
 func TestAdditionPosition(t *testing.T) {
@@ -24,9 +27,10 @@ func TestAdditionPosition(t *testing.T) {
 	outc := run(d, []int64{})
 	defer close(outc)
 
-	if v := <-outc; v != 109 {
+	if v := <-outc; v.Val != 109 {
 		t.Errorf("Output was %v; want 109", v)
 	}
+	checkTerminated(t, outc)
 }
 
 func TestAdditionImmediate(t *testing.T) {
@@ -34,9 +38,10 @@ func TestAdditionImmediate(t *testing.T) {
 	outc := run(d, []int64{})
 	defer close(outc)
 
-	if v := <-outc; v != 84 {
+	if v := <-outc; v.Val != 84 {
 		t.Errorf("Output was %v; want 109", v)
 	}
+	checkTerminated(t, outc)
 }
 
 func TestAdditionRelative(t *testing.T) {
@@ -44,9 +49,10 @@ func TestAdditionRelative(t *testing.T) {
 	outc := run(d, []int64{})
 	defer close(outc)
 
-	if v := <-outc; v != 2200 {
+	if v := <-outc; v.Val != 2200 {
 		t.Errorf("Output was %v; want 109", v)
 	}
+	checkTerminated(t, outc)
 }
 
 func TestMultiplicationPosition(t *testing.T) {
@@ -55,9 +61,10 @@ func TestMultiplicationPosition(t *testing.T) {
 	defer close(outc)
 
 	expected := int64(5 * 104)
-	if v := <-outc; v != expected {
+	if v := <-outc; v.Val != expected {
 		t.Errorf("Output was %v; want %v", v, expected)
 	}
+	checkTerminated(t, outc)
 }
 
 func TestMultiplicationImmediate(t *testing.T) {
@@ -66,9 +73,10 @@ func TestMultiplicationImmediate(t *testing.T) {
 	defer close(outc)
 
 	expected := int64(42 * 42)
-	if v := <-outc; v != expected {
+	if v := <-outc; v.Val != expected {
 		t.Errorf("Output was %v; want %v", v, expected)
 	}
+	checkTerminated(t, outc)
 }
 
 func TestMultiplicationRelative(t *testing.T) {
@@ -77,9 +85,10 @@ func TestMultiplicationRelative(t *testing.T) {
 	defer close(outc)
 
 	expected := int64(2202 * -1)
-	if v := <-outc; v != expected {
+	if v := <-outc; v.Val != expected {
 		t.Errorf("Output was %v; want %v", v, expected)
 	}
+	checkTerminated(t, outc)
 }
 
 func TestRelativeBasePositionMode(t *testing.T) {
@@ -87,9 +96,10 @@ func TestRelativeBasePositionMode(t *testing.T) {
 	outc := run(d, []int64{})
 	defer close(outc)
 
-	if v := <-outc; v != 204 {
+	if v := <-outc; v.Val != 204 {
 		t.Errorf("Output was %v; want 204", v)
 	}
+	checkTerminated(t, outc)
 }
 
 func TestRelativeBaseImmediateMode(t *testing.T) {
@@ -97,9 +107,10 @@ func TestRelativeBaseImmediateMode(t *testing.T) {
 	outc := run(d, []int64{})
 	defer close(outc)
 
-	if v := <-outc; v != 12345 {
+	if v := <-outc; v.Val != 12345 {
 		t.Errorf("Output was %v; want 12345", v)
 	}
+	checkTerminated(t, outc)
 }
 
 func TestRelativeBaseRelativeMode(t *testing.T) {
@@ -107,9 +118,10 @@ func TestRelativeBaseRelativeMode(t *testing.T) {
 	outc := run(d, []int64{})
 	defer close(outc)
 
-	if v := <-outc; v != 12345 {
+	if v := <-outc; v.Val != 12345 {
 		t.Errorf("Output was %v; want 12345", v)
 	}
+	checkTerminated(t, outc)
 }
 
 func TestInputPosition(t *testing.T) {
@@ -117,9 +129,10 @@ func TestInputPosition(t *testing.T) {
 	outc := run(d, []int64{42})
 	defer close(outc)
 
-	if v := <-outc; v != 42 {
+	if v := <-outc; v.Val != 42 {
 		t.Errorf("Output was %v; want 42", v)
 	}
+	checkTerminated(t, outc)
 }
 
 func TestInputRelative(t *testing.T) {
@@ -127,9 +140,10 @@ func TestInputRelative(t *testing.T) {
 	outc := run(d, []int64{42})
 	defer close(outc)
 
-	if v := <-outc; v != 42 {
+	if v := <-outc; v.Val != 42 {
 		t.Errorf("Output was %v; want 42", v)
 	}
+	checkTerminated(t, outc)
 }
 
 func TestJumpIfTruePosition_False(t *testing.T) {
@@ -137,9 +151,10 @@ func TestJumpIfTruePosition_False(t *testing.T) {
 	outc := run(d, []int64{})
 	defer close(outc)
 
-	if v := <-outc; v != -1 {
+	if v := <-outc; v.Val != -1 {
 		t.Errorf("Output was %v; want -1", v)
 	}
+	checkTerminated(t, outc)
 }
 
 func TestJumpIfTruePosition_True(t *testing.T) {
@@ -147,9 +162,10 @@ func TestJumpIfTruePosition_True(t *testing.T) {
 	outc := run(d, []int64{})
 	defer close(outc)
 
-	if v := <-outc; v != 42 {
+	if v := <-outc; v.Val != 42 {
 		t.Errorf("Output was %v; want 42", v)
 	}
+	checkTerminated(t, outc)
 }
 
 func TestJumpIfTrueDirect_False(t *testing.T) {
@@ -157,9 +173,10 @@ func TestJumpIfTrueDirect_False(t *testing.T) {
 	outc := run(d, []int64{})
 	defer close(outc)
 
-	if v := <-outc; v != -1 {
+	if v := <-outc; v.Val != -1 {
 		t.Errorf("Output was %v; want -1", v)
 	}
+	checkTerminated(t, outc)
 }
 
 func TestJumpIfTrueDirect_True(t *testing.T) {
@@ -167,9 +184,10 @@ func TestJumpIfTrueDirect_True(t *testing.T) {
 	outc := run(d, []int64{})
 	defer close(outc)
 
-	if v := <-outc; v != 42 {
+	if v := <-outc; v.Val != 42 {
 		t.Errorf("Output was %v; want 42", v)
 	}
+	checkTerminated(t, outc)
 }
 
 func TestJumpIfFalsePosition_False(t *testing.T) {
@@ -177,9 +195,10 @@ func TestJumpIfFalsePosition_False(t *testing.T) {
 	outc := run(d, []int64{})
 	defer close(outc)
 
-	if v := <-outc; v != 42 {
+	if v := <-outc; v.Val != 42 {
 		t.Errorf("Output was %v; want 42", v)
 	}
+	checkTerminated(t, outc)
 }
 
 func TestJumpIfFalsePosition_True(t *testing.T) {
@@ -187,9 +206,10 @@ func TestJumpIfFalsePosition_True(t *testing.T) {
 	outc := run(d, []int64{})
 	defer close(outc)
 
-	if v := <-outc; v != -1 {
+	if v := <-outc; v.Val != -1 {
 		t.Errorf("Output was %v; want -1", v)
 	}
+	checkTerminated(t, outc)
 }
 
 // By this time, assume memory addressing works, focus on functionality.
@@ -200,10 +220,11 @@ func TestLessThan(t *testing.T) {
 
 	exp := []int64{1, 0, 0}
 	for _, e := range exp {
-		if v := <-outc; v != e {
+		if v := <-outc; v.Val != e {
 			t.Errorf("Output was %v; want %v", v, e)
 		}
 	}
+	checkTerminated(t, outc)
 }
 
 func TestEquals(t *testing.T) {
@@ -213,8 +234,9 @@ func TestEquals(t *testing.T) {
 
 	exp := []int64{1, 0, 1}
 	for _, e := range exp {
-		if v := <-outc; v != e {
+		if v := <-outc; v.Val != e {
 			t.Errorf("Output was %v; want %v", v, e)
 		}
 	}
+	checkTerminated(t, outc)
 }
