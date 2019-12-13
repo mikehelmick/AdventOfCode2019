@@ -66,15 +66,10 @@ func main() {
 	screen := make(map[pos]int64)
 
 	inC := make(chan int64, 5)
-	outC := make(chan int64, 1)
-	doneC := make(chan bool, 1)
-	emulator := computer.NewEmulator(data, inC, outC, doneC)
+	outC := make(chan computer.Output, 1)
+	emulator := computer.NewEmulator(data, inC, outC)
 
-	// part 1 starts on black (0), part 2 starts on white(1)
-	go func() {
-		emulator.Execute()
-		close(outC)
-	}()
+	go emulator.Execute()
 
 	paddle := &pos{0, 0}
 	ball := &pos{0, 0}
@@ -83,10 +78,17 @@ func main() {
 	done := false
 	for !done {
 		//print(hull, p, d)
-		select {
-		case x := <-outC:
-			y := <-outC
-			inst := <-outC
+		xOut := <-outC
+		if xOut.Done {
+			log.Printf("emulator terminated")
+			done = true
+		} else {
+			yOut := <-outC
+			instOut := <-outC
+
+			x := xOut.Val
+			y := yOut.Val
+			inst := instOut.Val
 
 			if x == -1 && y == 0 {
 				score = inst
@@ -115,17 +117,13 @@ func main() {
 				height = y
 			}
 			//printScreen(screen, width, height)
-		case <-doneC:
-			log.Printf("emulator terminated")
-			done = true
 		}
 	}
 
 	// because of a race, the done channel may get selected before
 	// before the output channel is consumed.
-	score = finalScore(score, outC)
 	log.Printf("score: %v", score)
 
-	close(doneC)
+	close(outC)
 	close(inC)
 }

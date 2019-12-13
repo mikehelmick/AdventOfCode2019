@@ -28,29 +28,23 @@ func main() {
 	screen := make(map[pos]int64)
 
 	inC := make(chan int64, 5)
-	outC := make(chan int64, 50)
-	doneC := make(chan bool, 1)
-	emulator := computer.NewEmulator(data, inC, outC, doneC)
+	outC := make(chan computer.Output, 50)
+	emulator := computer.NewEmulator(data, inC, outC)
 
 	// part 1 starts on black (0), part 2 starts on white(1)
-	go func() {
-		emulator.Execute()
-		close(outC)
-	}()
+	go emulator.Execute()
 
 	done := false
 	for !done {
 		//print(hull, p, d)
-		select {
-		case x := <-outC:
-			y := <-outC
-			inst := <-outC
-
-			screen[pos{x, y}] = inst
-
-		case <-doneC:
+		x := <-outC
+		if x.Done {
 			log.Printf("emulator terminated")
 			done = true
+		} else {
+			y := <-outC
+			inst := <-outC
+			screen[pos{x.Val, y.Val}] = inst.Val
 		}
 	}
 
@@ -62,6 +56,6 @@ func main() {
 	}
 	log.Printf("Total blocks %v", blocks)
 
-	close(doneC)
+	close(outC)
 	close(inC)
 }
