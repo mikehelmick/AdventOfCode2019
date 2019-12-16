@@ -149,7 +149,7 @@ func bfs(room map[pos]int64) int64 {
 
 		for _, can := range q {
 			if room[can] == tank {
-				fmt.Printf("Foudn tank at %v", can)
+				log.Printf("Found tank at %v", can)
 				return dist
 			}
 			for _, nei := range can.neighbors(room) {
@@ -227,7 +227,7 @@ func main() {
 
 	printScreen(room, pos{0, 0}, d)
 	steps := bfs(room)
-	fmt.Printf("Takes %v steps to get tank\n", steps)
+	log.Printf("Takes %v steps to get tank\n", steps)
 
 	close(outC)
 	close(inC)
