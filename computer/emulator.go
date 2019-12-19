@@ -116,7 +116,7 @@ func (c *Emulator) Execute() {
 			c.relativeBase += c.mem[c.getP1Addr()]
 			increase = 2
 		case 99:
-			log.Printf("END\n")
+			//log.Printf("END\n")
 			c.output <- Output{0, true}
 			return
 		default:
