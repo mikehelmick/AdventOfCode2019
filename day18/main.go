@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 )
 
 type pos struct {
@@ -38,7 +39,7 @@ func isKey(s string) bool {
 	return s[0] >= 'a' && s[0] <= 'z'
 }
 
-func loadLine(maze *maze, line string, o *pos, keys, doors map[string]pos) {
+func loadLine(maze *maze, line string, o *pos, keys, doors map[pos]string) {
 	for i, rune := range line {
 		ch := string(rune)
 		pos := pos{i, maze.h}
@@ -47,9 +48,9 @@ func loadLine(maze *maze, line string, o *pos, keys, doors map[string]pos) {
 			o.x = i
 			o.y = maze.h
 		} else if isKey(ch) {
-			keys[ch] = pos
+			keys[pos] = ch
 		} else if isDoor(ch) {
-			doors[ch] = pos
+			doors[pos] = ch
 		}
 
 		maze.w = i
@@ -113,6 +114,7 @@ func (pq *priorityQueue) Pop() interface{} {
 
 func (m *maze) countDistanceToOthers(p pos) []dist {
 	visited := make(map[pos]bool)
+	visited[p] = true
 	q := make([]pos, 0, 100)
 	q = enqueueNeighbors(p, m, visited, q)
 
@@ -127,7 +129,6 @@ func (m *maze) countDistanceToOthers(p pos) []dist {
 			val := m.grid[cand]
 			if isKey(val) || isDoor(val) {
 				distance = append(distance, dist{cand, rounds})
-				continue
 			}
 			nQ = enqueueNeighbors(cand, m, visited, nQ)
 		}
@@ -137,7 +138,16 @@ func (m *maze) countDistanceToOthers(p pos) []dist {
 	return distance
 }
 
-func (m *maze) solve(p pos, keys map[string]pos) int {
+func (m *maze) printCosts(cost map[pos]int) {
+	for k, v := range cost {
+		fmt.Printf("%v @ %v -> %v\n", m.grid[k], k, v)
+	}
+}
+
+// INFINITY is just a big number
+const INFINITY = 32000000
+
+func (m *maze) solve(p pos, doors, keys map[pos]string) int {
 	cost := make(map[pos]int)
 
 	// Calculate the reachable distance between each point.
@@ -145,30 +155,61 @@ func (m *maze) solve(p pos, keys map[string]pos) int {
 	for k, v := range m.grid {
 		if v == "@" || isDoor(v) || isKey(v) {
 			distTo[k] = m.countDistanceToOthers(k)
-			cost[k] = 32000000
+			cost[k] = INFINITY
 		}
 	}
+	log.Printf("----DISTANCE----")
+	for k, v := range distTo {
+		log.Printf("%v -> %v\n", k, v)
+	}
 	cost[p] = 0
+
+	foundKeys := make(map[pos]map[string]bool)
+	for k := range distTo {
+		foundKeys[k] = make(map[string]bool)
+	}
 
 	q := make(priorityQueue, 0, len(keys))
 	heap.Init(&q)
 	heap.Push(&q, &dist{p, 0})
 
 	prev := make(map[pos]pos)
-
 	for len(q) > 0 {
+		m.printCosts(cost)
 		n := heap.Pop(&q).(*dist)
-		log.Printf("Processing %v", n)
+
+		if cost[n.p] < n.d {
+			continue
+		}
+
+		if k, ok := keys[n.p]; ok {
+			foundKeys[n.p][strings.ToUpper(k)] = true
+		}
+		if len(foundKeys) == len(keys) {
+			return cost[n.p]
+		}
+
+		log.Printf("Processing %v -> %v", n, m.grid[n.p])
 		for _, d := range distTo[n.p] {
+			log.Printf(" \\-> Checking %v -> %v", d.p, m.grid[d.p])
+			log.Printf(" \\-> Held keys %v", foundKeys[n.p])
+			if isDoor(m.grid[d.p]) && !foundKeys[n.p][m.grid[d.p]] {
+				log.Printf(" \\-> missing key.")
+				continue
+			}
+			for k := range foundKeys[n.p] {
+				foundKeys[d.p][k] = true
+			}
+			if isKey(m.grid[d.p]) {
+				foundKeys[d.p][strings.ToUpper(m.grid[d.p])] = true
+			}
+
 			alt := n.d + d.d
 			log.Printf(" n: %v alt: %v", d, alt)
 			if alt < cost[d.p] {
 				cost[d.p] = alt
 				prev[d.p] = d.p
-
-				if idx := q.index(d.p); idx >= 0 {
-					heap.Remove(&q, idx)
-				}
+				log.Printf(" \\-> Adding search from %v -> %v", d.p, m.grid[d.p])
 				heap.Push(&q, &dist{d.p, alt})
 			}
 		}
@@ -176,12 +217,23 @@ func (m *maze) solve(p pos, keys map[string]pos) int {
 
 	log.Printf("%v", cost)
 
-	totCost := 0
-	for _, v := range cost {
-		totCost += v
+	maxCost := 0
+	for k, v := range cost {
+		if isKey(m.grid[k]) {
+			maxCost += v
+		}
 	}
 
-	return totCost
+	return maxCost
+}
+
+type record struct {
+	key   pos
+	doors []pos
+}
+
+func (m *maze) solve2(p pos, doors, keys map[pos]string) int {
+
 }
 
 func main() {
@@ -189,8 +241,8 @@ func main() {
 	maze.grid = make(map[pos]string)
 
 	origin := &pos{}
-	keys := make(map[string]pos)
-	doors := make(map[string]pos)
+	keys := make(map[pos]string)
+	doors := make(map[pos]string)
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
@@ -202,8 +254,8 @@ func main() {
 	maze.print()
 	fmt.Printf("origin: %v\n", origin)
 	fmt.Printf("keys (%v): %v\n", len(keys), keys)
-	fmt.Printf("doors: %v\n", doors)
+	fmt.Printf("doors (%v): %v\n", len(doors), doors)
 	fmt.Println("---solving---")
-	steps := maze.solve(*origin, keys)
+	steps := maze.solve(*origin, doors, keys)
 	fmt.Printf("Steps needed %v\n", steps)
 }
