@@ -319,49 +319,78 @@ func (m *maze) runDfs(stack []pos, visited map[pos]bool, heldKeys map[string]boo
 		return dist
 	}
 	visited[p] = true
-	//log.Printf("%v :: Searching from %v -> %v, dist:%v", stack, p, m.grid[p], dist)
+	log.Printf("%v :: Searching from %v -> %v, dist:%v", stack, p, m.grid[p], dist)
 	//log.Printf("Adjacency: %v", distTo[p])
 	result := toBeat
+
+	waitFor := 0
+	resCh := make(chan int)
 
 	for _, dst := range distTo[p] {
 		if visited[dst.p] {
 			continue
 		}
-		//log.Printf(" \\-> Considering %v -> %v, haveKeys %v", dst, m.grid[dst.p], heldKeys)
+		log.Printf(" \\-> Considering %v -> %v, haveKeys %v", dst, m.grid[dst.p], heldKeys)
 		if m.isDoor(dst.p) || m.isKey(dst.p) {
 			if !hasNecessaryKeys(heldKeys, dst.reqKeys) {
 				//log.Printf(" \\-> Don't have necessary key for %v -> %v", dst.p, m.grid[dst.p])
 			} else {
-				if m.isKey(dst.p) {
-					pickupKey(m, heldKeys, dst.p)
-				}
 				newStack := make([]pos, len(stack)+1)
 				copy(newStack, stack)
 				newStack[len(stack)] = dst.p
 
-				stop := make(chan int)
-				go func() {
-					stop <- m.runDfs(newStack, visited, heldKeys, target, distTo, dist+dst.d, toBeat)
-				}()
-				res := <-stop
-				//} else {
-				//	m.runDfs(newStack, visited, heldKeys, target, distTo, dist+dst.d, toBeat)
-				//}
-
-				if res < result {
-					if len(heldKeys) == target {
-						log.Printf("New shortest path: %v", res)
-						//m.printStack(stack)
+				if dist == 0 {
+					newVisited := make(map[pos]bool)
+					for k, v := range visited {
+						newVisited[k] = v
 					}
-					result = res
-					toBeat = res
-				}
-				if m.isKey(dst.p) {
-					dropKey(m, heldKeys, dst.p)
+
+					newKeys := make(map[string]bool)
+					for k, v := range heldKeys {
+						newKeys[k] = v
+					}
+					waitFor++
+					go func() {
+						resCh <- m.runDfs(newStack, newVisited, newKeys, target, distTo, dist+dst.d, toBeat)
+					}()
+				} else {
+					if m.isKey(dst.p) {
+						pickupKey(m, heldKeys, dst.p)
+					}
+
+					stop := make(chan int)
+					go func() {
+						stop <- m.runDfs(newStack, visited, heldKeys, target, distTo, dist+dst.d, toBeat)
+					}()
+					res := <-stop
+					//} else {
+					//	m.runDfs(newStack, visited, heldKeys, target, distTo, dist+dst.d, toBeat)
+					//}
+
+					if res < result {
+						if len(heldKeys) == target {
+							log.Printf("New shortest path: %v", res)
+							//m.printStack(stack)
+						}
+						result = res
+						toBeat = res
+					}
+					if m.isKey(dst.p) {
+						dropKey(m, heldKeys, dst.p)
+					}
 				}
 			}
 		}
 	}
+	for waitFor > 0 {
+		res := <-resCh
+		log.Printf("New candidate: %v", res)
+		if res < result {
+			result = res
+		}
+		waitFor--
+	}
+
 	delete(visited, p)
 	return result
 }
@@ -379,7 +408,7 @@ func (m *maze) solve2(p pos, doors, keys map[pos]string) int {
 	log.Printf("----------------------------------")
 	stack := make([]pos, 1)
 	stack[0] = p
-	return m.runDfs(stack, visited, heldKeys, len(keys), distTo, 0, 8750)
+	return m.runDfs(stack, visited, heldKeys, len(keys), distTo, 0, 7902)
 }
 
 func main() {
