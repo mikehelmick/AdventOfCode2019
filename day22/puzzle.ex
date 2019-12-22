@@ -1,4 +1,5 @@
 defmodule Puzzle do
+  require Integer
 
   def generateList(x, y, acc) when x == y, do: acc
   def generateList(x, y, acc) do
@@ -61,7 +62,8 @@ defmodule Puzzle do
   def find([x|_], target, pos) when x == target, do: pos
   def find([_|rest], target, pos), do: find(rest, target, pos+1)
 
-  def part1(deck, input) do
+  def part1(input) do
+    deck = generateList(0, 10007, [])
     IO.puts("#{inspect(deck)}")
     IO.puts("Length #{length(deck)} first: #{List.first(deck)} last: #{List.last(deck)}")
 
@@ -71,28 +73,97 @@ defmodule Puzzle do
     IO.puts("Answer #{ans}")
   end
 
-  def doRound(deck, _, 0, _), do: deck
-  def doRound(deck, input, times, origin) do
-    if Integer.mod(times,100) do
-      IO.puts("--> #{times}")
-    end
-    deck = Puzzle.process(input, deck)
+  # code for part 2
 
-    hash = :crypto.hash(:md5, deck) |> Base.encode16()
-    if String.equivalent?(hash, origin) do
-      IO.puts("Back to original with #{times} ")
-    end
+  def  pow(n, k, mod), do: pow(n, k, mod, 1)
+  defp pow(_, 0, mod, acc), do: rem(acc, mod)
+  defp pow(n, k, mod, acc), do: pow(n, k - 1, mod, rem(n * acc, mod))
 
-    doRound(deck, input, times-1, origin)
+  #def inverse(n, cards) do
+  #  Integer.mod(pow(n, cards-2), cards)
+  #end
+
+  def extended_gcd(a, b) do
+    {last_remainder, last_x} = extended_gcd(abs(a), abs(b), 1, 0, 0, 1)
+    {last_remainder, last_x * (if a < 0, do: -1, else: 1)}
   end
 
-  def part2(deck, input) do
-    origin = :crypto.hash(:md5, deck) |> Base.encode16()
-    IO.puts("Hash of original order: #{origin}")
-    deck = doRound(deck, input, 101741582076661, origin)
+  defp extended_gcd(last_remainder, 0, last_x, _, _, _), do: {last_remainder, last_x}
+  defp extended_gcd(last_remainder, remainder, last_x, x, last_y, y) do
+    quotient   = div(last_remainder, remainder)
+    remainder2 = rem(last_remainder, remainder)
+    extended_gcd(remainder, remainder2, x, last_x - quotient*x, y, last_y - quotient*y)
+  end
 
-    ans = Enum.at(deck, 2020)
-    IO.puts("Answer: #{ans}")
+  def inverse(e, et) do
+    {g, x} = extended_gcd(e, et)
+    if g != 1, do: raise "The maths are broken!"
+    rem(x+et, et)
+  end
+
+  def getPos(offset, increment, i, cards) do
+    Integer.mod(offset + i * increment, cards)
+  end
+
+  def calcDeal(command, cards, inc, off) do
+    case String.starts_with?(command, "deal into new stack") do
+      true ->
+        inc = inc * -1
+        inc = Integer.mod(inc, cards)
+        off = off + inc
+        off = Integer.mod(off, cards)
+        {inc, off}
+      false -> {inc, off}
+    end
+  end
+
+  def calcCut(command, cards, inc, off) do
+    case String.starts_with?(command, "cut ") do
+      true ->
+        [_,n_str] = String.split(command)
+        {num, _} = Integer.parse(n_str)
+        off = off + num * inc
+        off = Integer.mod(off, cards)
+        {inc, off}
+      false -> {inc, off}
+    end
+  end
+
+  def calcDealIncrement(command, cards, inc, off) do
+    case String.starts_with?(command, "deal with increment ") do
+      true ->
+        [_,_,_,n_str] = String.split(command)
+        {num, _} = Integer.parse(n_str)
+        inc = inc * inverse(num, cards)
+        inc = Integer.mod(inc, cards)
+        {inc, off}
+      false -> {inc, off}
+    end
+  end
+
+  def getIncrementOffset([], _cards, inc, off), do: {inc, off}
+  def getIncrementOffset([line|rest], cards, inc, off) do
+    {inc, off} = calcDeal(line, cards, inc, off)
+    {inc, off} = calcCut(line, cards, inc, off)
+    {inc, off} = calcDealIncrement(line, cards, inc, off)
+    IO.puts("#{line} -> {#{inc}, #{off}}")
+    getIncrementOffset(rest, cards, inc, off)
+  end
+
+  # Based on the writeup at
+  # https://www.reddit.com/r/adventofcode/comments/ee0rqi/2019_day_22_solutions/fbnkaju/
+  def part2(input) do
+    size = 119315717514047
+    rounds = 101741582076661
+
+    {increment, offset} = getIncrementOffset(input, size, 1, 0)
+    IO.puts("Inc: #{increment} Off: #{offset}")
+
+    f_increment = pow(increment, rounds, size)
+    f_offset = offset * (1-increment) * Integer.mod(inverse(1-increment, size), size)
+    f_offset = Integer.mod(f_offset, size)
+
+    IO.puts("Answer: #{getPos(f_offset, f_increment, 2020, size)}")
   end
 end
 
@@ -100,9 +171,5 @@ input = IO.read(:stdio, :all)
   |> String.trim()
   |> String.split("\n")
 
-# part 1 -> 10007
-# part 2 -> 119315717514047
-deck = Puzzle.generateList(0, 119315717514047, [])
-
-# Puzzle.part1(deck, input)
-Puzzle.part2(deck, input)
+Puzzle.part1(input)
+Puzzle.part2(input)
