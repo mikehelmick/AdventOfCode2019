@@ -1,6 +1,8 @@
 package computer
 
-import "testing"
+import (
+	"testing"
+)
 
 func run(data []int64, input []int64) chan Output {
 	in := make(chan int64, 10)
@@ -144,6 +146,40 @@ func TestInputRelative(t *testing.T) {
 		t.Errorf("Output was %v; want 42", v)
 	}
 	checkTerminated(t, outc)
+}
+
+func TestNonBlockingInput(t *testing.T) {
+	in := make(chan int64, 10)
+	out := make(chan Output, 10)
+	data := []int64{03, 12, 04, 12, 1007, 12, 0, 13, 1005, 13, 0, 99, 0, 0, 00}
+	e := NewEmulator(data, in, out, true)
+	go e.Execute()
+
+	target := int64(1234)
+	outputVals := make([]int64, 0, 100)
+	for {
+		output := <-out
+		if output.Done {
+			break
+		}
+
+		outputVals = append(outputVals, output.Val)
+		in <- target
+	}
+
+	found := false
+	for _, v := range outputVals {
+		if v == target {
+			found = true
+		}
+	}
+
+	if !found {
+		t.Errorf("Output expected %v, output was %v", target, outputVals)
+	}
+
+	close(in)
+	close(out)
 }
 
 func TestJumpIfTruePosition_False(t *testing.T) {

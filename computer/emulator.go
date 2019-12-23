@@ -72,7 +72,7 @@ func (c *Emulator) Execute() {
 	for {
 		opcode := c.mem[c.pc] % 100
 		increase := int64(4) // default increase
-		//log.Printf("PC %4d : %05d (%d,%d,%d)", pos, c.mem[pos], c.mem[pos+1], c.mem[pos+2], c.mem[pos+3])
+		//log.Printf("PC %4d : %05d (%d,%d,%d)", c.pc, c.mem[c.pc], c.mem[c.pc+1], c.mem[c.pc+2], c.mem[c.pc+3])
 
 		switch opcode {
 		case 1:
