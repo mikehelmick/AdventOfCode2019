@@ -79,6 +79,34 @@ defmodule Puzzle do
   defp pow(_, 0, mod, acc), do: rem(acc, mod)
   defp pow(n, k, mod, acc), do: pow(n, k - 1, mod, rem(n * acc, mod))
 
+  def expand(place, target, _a, _c, acc) when place>target, do: acc
+  def expand(1, target, a, c, acc) do
+    expand(2, target, a, c, acc ++ [Integer.mod(a, c)])
+  end
+  def expand(place, target, a, c, acc) do
+    last = List.last(acc)
+    val = Integer.mod(last * last, c)
+    expand(place + 1, target, a, c, acc ++ [Integer.mod(a, c)])
+  end
+
+  def combine_powers([], _, acc), do: acc
+  def combine_powers([0|rest], [_|rest_powers], acc), do: acc
+  def combine_powers([1|rest], [power|rest_powers], acc) do
+    combine_powers(rest, rest_powers, acc * power)
+  end
+
+  def fastPow(a, b, c) do
+    # b as list of zeros and ones
+    IO.puts("Calc: #{a}^#{b} % #{c}")
+    b_bin = String.graphemes(Integer.to_string(b, 2))
+      |> Enum.map(fn x -> Integer.parse(x, 10) end)
+      |> Enum.map(fn {x,_} -> x end)
+      |> Enum.reverse()
+    powers = expand(1, length(b_bin), a, c, [])
+    IO.puts("Effective powers: #{inspect(powers)}")
+    Integer.mod(combine_powers(b_bin, powers, 1), c)
+  end
+
   #def inverse(n, cards) do
   #  Integer.mod(pow(n, cards-2), cards)
   #end
@@ -159,7 +187,8 @@ defmodule Puzzle do
     {increment, offset} = getIncrementOffset(input, size, 1, 0)
     IO.puts("Inc: #{increment} Off: #{offset}")
 
-    f_increment = pow(increment, rounds, size)
+
+    f_increment = fastPow(increment, rounds, size)
     f_offset = offset * (1-increment) * Integer.mod(inverse(1-increment, size), size)
     f_offset = Integer.mod(f_offset, size)
 
