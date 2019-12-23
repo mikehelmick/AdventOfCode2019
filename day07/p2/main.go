@@ -34,8 +34,19 @@ func permutations(arr []int64, ch chan []int64) {
 	helper(arr, int64(len(arr)))
 }
 
-func startMachine(data []int64, input, output chan int64, doneC chan bool) {
-	c := computer.NewEmulator(data, input, output, doneC)
+func link(input chan int64, output chan computer.Output, doneC chan bool) {
+	for {
+		o := <-output
+		if o.Done {
+			break
+		}
+		input <- o.Val
+	}
+	doneC <- true
+}
+
+func startMachine(data []int64, input chan int64, output chan computer.Output) {
+	c := computer.NewEmulator(data, input, output, false)
 	c.Execute()
 }
 
@@ -73,6 +84,7 @@ func main() {
 
 		// separate copy of the program for each machine & input channel.
 		channels := make([]chan int64, 5)
+		outChannels := make([]chan computer.Output, 5)
 		for i := 0; i < 5; i++ {
 			channels[i] = make(chan int64, 20)
 			channels[i] <- perm[i]
@@ -80,17 +92,23 @@ func main() {
 				// input to 1st machine.
 				channels[i] <- 0
 			}
+			outChannels[i] = make(chan computer.Output, 20)
 		}
 
 		// single done output channel. We'll just wait for 5 dones.
 		doneC := make(chan bool, 5)
 
 		// start and link the parallel machines
-		go startMachine(data, channels[0], channels[1], doneC)
-		go startMachine(data, channels[1], channels[2], doneC)
-		go startMachine(data, channels[2], channels[3], doneC)
-		go startMachine(data, channels[3], channels[4], doneC)
-		go startMachine(data, channels[4], channels[0], doneC)
+		go startMachine(data, channels[0], outChannels[0])
+		go link(channels[1], outChannels[0], doneC)
+		go startMachine(data, channels[1], outChannels[1])
+		go link(channels[2], outChannels[1], doneC)
+		go startMachine(data, channels[2], outChannels[2])
+		go link(channels[3], outChannels[2], doneC)
+		go startMachine(data, channels[3], outChannels[3])
+		go link(channels[4], outChannels[3], doneC)
+		go startMachine(data, channels[4], outChannels[4])
+		go link(channels[0], outChannels[4], doneC)
 
 		for i := 0; i < 5; i++ {
 			<-doneC
