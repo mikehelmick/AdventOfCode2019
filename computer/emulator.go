@@ -1,6 +1,9 @@
 package computer
 
-import "log"
+import (
+	"log"
+	"time"
+)
 
 // Output is a single piece of output from the emulator. If done is false
 // then it is an integer output from the machine. If done is true, the
@@ -16,6 +19,8 @@ type Emulator struct {
 	pc           int64
 	relativeBase int64
 
+	nonBlockingInput bool
+
 	input  chan int64
 	output chan Output
 }
@@ -25,12 +30,13 @@ const immediateMode = 1
 const relativeMode = 2
 
 // NewEmulator initializes a new intcode computer
-func NewEmulator(program []int64, input chan int64, output chan Output) *Emulator {
+func NewEmulator(program []int64, input chan int64, output chan Output, nonBlockingInput bool) *Emulator {
 	emu := new(Emulator)
 	emu.mem = make([]int64, len(program)*10)
 	copy(emu.mem, program)
 	emu.input = input
 	emu.output = output
+	emu.nonBlockingInput = nonBlockingInput
 	return emu
 }
 
@@ -74,7 +80,16 @@ func (c *Emulator) Execute() {
 		case 2:
 			c.mem[c.getP3Addr()] = c.mem[c.getP1Addr()] * c.mem[c.getP2Addr()]
 		case 3:
-			c.mem[c.getP1Addr()] = <-c.input
+			if c.nonBlockingInput {
+				select {
+				case val := <-c.input:
+					c.mem[c.getP1Addr()] = val
+				case <-time.After(100 * time.Millisecond):
+					c.mem[c.getP1Addr()] = -1
+				}
+			} else {
+				c.mem[c.getP1Addr()] = <-c.input
+			}
 			increase = 2
 		case 4:
 			c.output <- Output{c.mem[c.getP1Addr()], false}

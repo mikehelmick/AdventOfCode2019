@@ -9,7 +9,7 @@ func run(data []int64, input []int64) chan Output {
 	for _, i := range input {
 		in <- i
 	}
-	e := NewEmulator(data, in, out)
+	e := NewEmulator(data, in, out, false)
 	e.Execute()
 
 	close(in)
