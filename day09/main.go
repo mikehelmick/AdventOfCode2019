@@ -26,7 +26,7 @@ func main() {
 	for _, input := range inputs {
 		inC := make(chan int64, 5)
 		outC := make(chan computer.Output, 50)
-		emulator := computer.NewEmulator(data, inC, outC)
+		emulator := computer.NewEmulator(data, inC, outC, false)
 
 		// Part 1 had input of 1, part 2 had input of 2
 		inC <- input
