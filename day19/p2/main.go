@@ -20,7 +20,7 @@ func (data prog) testCord(x, y int64) bool {
 	defer close(inC)
 	outC := make(chan computer.Output, 50)
 	defer close(outC)
-	emulator := computer.NewEmulator(data, inC, outC)
+	emulator := computer.NewEmulator(data, inC, outC, false)
 	go emulator.Execute()
 
 	inC <- x

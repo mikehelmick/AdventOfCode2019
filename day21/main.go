@@ -52,7 +52,7 @@ func main() {
 
 	inC := make(chan int64, len(ascii))
 	outC := make(chan computer.Output)
-	emulator := computer.NewEmulator(data, inC, outC)
+	emulator := computer.NewEmulator(data, inC, outC, false)
 	go emulator.Execute()
 
 	log.Printf("Program in ASCII: %v", ascii)

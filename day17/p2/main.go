@@ -32,7 +32,7 @@ func main() {
 
 	inC := make(chan int64, len(program))
 	outC := make(chan computer.Output, 50)
-	emulator := computer.NewEmulator(data, inC, outC)
+	emulator := computer.NewEmulator(data, inC, outC, false)
 
 	for _, v := range program {
 		inC <- v
