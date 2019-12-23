@@ -68,7 +68,7 @@ func main() {
 
 	inC := make(chan int64, 5)
 	outC := make(chan computer.Output, 50)
-	emulator := computer.NewEmulator(data, inC, outC)
+	emulator := computer.NewEmulator(data, inC, outC, false)
 
 	// part 1 starts on black (0), part 2 starts on white(1)
 	inC <- 1
