@@ -54,7 +54,7 @@ func main() {
 
 	inC := make(chan int64, 1)
 	outC := make(chan computer.Output, 10)
-	emulator := computer.NewEmulator(data, inC, outC)
+	emulator := computer.NewEmulator(data, inC, outC, false)
 
 	go emulator.Execute()
 
