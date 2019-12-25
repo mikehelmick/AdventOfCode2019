@@ -86,7 +86,7 @@ defmodule Puzzle do
   def expand(place, target, a, c, acc) do
     last = List.last(acc)
     val = Integer.mod(last * last, c)
-    expand(place + 1, target, a, c, acc ++ [Integer.mod(a, c)])
+    expand(place + 1, target, a, c, acc ++ [Integer.mod(val, c)])
   end
 
   def combine_powers([], _, acc), do: acc
